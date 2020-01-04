@@ -58,8 +58,8 @@ class PeopleCounter:
         for frame in range(self._frames):
             start = time()
             self._update(frame)
-            self._writer.write(self._image)
             self._render(frame)
+            self._writer.write(self._image)
             finish = time()
             delay = int(1000 / self._fps - (finish - start) * 1000)
             delay = max(delay, 1)
