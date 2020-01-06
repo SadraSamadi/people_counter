@@ -134,15 +134,13 @@ class PeopleCounter:
                 return tracker
 
     def _render(self, frame):
-        middle = self._height // 2
-        cv.line(self._image, (0, middle), (self._width, middle), (0, 255, 255), 2)
         for person in self._people:
             text = str(person.pid)
             last = person.positions[-1]
             start, end = last
             x, y = self._center(last)
-            cv.putText(self._image, text, (x + 8, y + 4), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            cv.circle(self._image, (x, y), 2, (0, 255, 0), 2)
+            cv.putText(self._image, text, (x + 8, y + 4), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            cv.circle(self._image, (x, y), 2, (0, 255, 255), 2)
             cv.rectangle(self._image, start, end, (255, 0, 0))
             for position in person.positions:
                 center = self._center(position)
@@ -158,7 +156,7 @@ class PeopleCounter:
         for i, (label, value) in enumerate(info):
             text = f'{label}: {value}'
             org = 10, (i * 20) + 20
-            cv.putText(self._image, text, org, cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv.putText(self._image, text, org, cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
         cv.imshow('Frame', self._image)
 
     def _position(self, tracker):
@@ -195,7 +193,7 @@ def main():
     parser.add_argument("-p", "--prototxt", type=str, default='train/mobile-net-ssd.prototxt')
     parser.add_argument("-m", "--model", type=str, default='train/mobile-net-ssd.caffemodel')
     parser.add_argument("-s", "--skip-frames", type=int, default=30)
-    parser.add_argument("-c", "--confidence", type=float, default=0.6)
+    parser.add_argument("-c", "--confidence", type=float, default=0.5)
     parser.add_argument("-d", "--distance", type=float, default=30.0)
     args = parser.parse_args()
     pc = PeopleCounter(
