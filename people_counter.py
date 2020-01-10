@@ -1,4 +1,3 @@
-from argparse import ArgumentParser
 from datetime import timedelta
 from math import sqrt
 from time import time
@@ -6,13 +5,6 @@ from time import time
 import cv2 as cv
 import dlib
 import numpy as np
-
-
-class Person:
-
-    def __init__(self, pid, position):
-        self.pid = pid
-        self.positions = [position]
 
 
 class PeopleCounter:
@@ -34,11 +26,11 @@ class PeopleCounter:
         self._writer = None
         self._image = None
         self._status = None
+        self._trackers = []
+        self._people = {}
+        self._counter = 0
         self._total_up = 0
         self._total_down = 0
-        self._trackers = []
-        self._people = []
-        self._counter = 0
 
     def init(self):
         self._net = cv.dnn.readNetFromCaffe(self._prototxt, self._caffemodel)
@@ -101,48 +93,49 @@ class PeopleCounter:
     def _track(self):
         trackers = self._trackers.copy()
         disappeared = []
-        for person in self._people:
-            tracker = self._nearest(trackers, person)
+        for pid, positions in self._people.items():
+            tracker = self._nearest(pid, trackers)
             if tracker:
                 position = self._position(tracker)
-                person.positions.append(position)
+                positions.append(position)
                 trackers.remove(tracker)
             else:
-                disappeared.append(person)
-        for person in disappeared:
-            first = person.positions[0]
-            last = person.positions[-1]
+                disappeared.append(pid)
+        for pid in disappeared:
+            positions = self._people[pid]
+            first = positions[0]
+            last = positions[-1]
             _, first = self._center(first)
             _, last = self._center(last)
             if first < last:
                 self._total_down += 1
             else:
                 self._total_up += 1
-            self._people.remove(person)
+            del self._people[pid]
         for tracker in trackers:
             position = self._position(tracker)
-            person = Person(self._counter, position)
-            self._people.append(person)
+            self._people[self._counter] = [position]
             self._counter += 1
 
-    def _nearest(self, trackers, person):
+    def _nearest(self, pid, trackers):
+        positions = self._people[pid]
         for tracker in trackers:
             position = self._position(tracker)
-            last = person.positions[-1]
+            last = positions[-1]
             dist = self._dist(position, last)
             if dist <= self._distance:
                 return tracker
 
     def _render(self, frame):
-        for person in self._people:
-            text = str(person.pid)
-            last = person.positions[-1]
+        for pid, positions in self._people.items():
+            text = str(pid)
+            last = positions[-1]
             start, end = last
             x, y = self._center(last)
             cv.putText(self._image, text, (x + 8, y + 4), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
             cv.circle(self._image, (x, y), 2, (0, 255, 255), 2)
             cv.rectangle(self._image, start, end, (255, 0, 0))
-            for position in person.positions:
+            for position in positions:
                 center = self._center(position)
                 cv.circle(self._image, center, 1, (0, 255, 0))
         elapsed = timedelta(milliseconds=frame * 1000 / self._fps)
@@ -184,30 +177,3 @@ class PeopleCounter:
         cv.destroyAllWindows()
         self._writer.release()
         self._video.release()
-
-
-def main():
-    parser = ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, required=True)
-    parser.add_argument("-o", "--output", type=str, required=True)
-    parser.add_argument("-p", "--prototxt", type=str, default='train/mobile-net-ssd.prototxt')
-    parser.add_argument("-m", "--model", type=str, default='train/mobile-net-ssd.caffemodel')
-    parser.add_argument("-s", "--skip-frames", type=int, default=30)
-    parser.add_argument("-c", "--confidence", type=float, default=0.5)
-    parser.add_argument("-d", "--distance", type=float, default=30.0)
-    args = parser.parse_args()
-    pc = PeopleCounter(
-        args.input,
-        args.output,
-        args.prototxt,
-        args.model,
-        args.skip_frames,
-        args.confidence,
-        args.distance
-    )
-    pc.init()
-    pc.start()
-
-
-if __name__ == '__main__':
-    main()
