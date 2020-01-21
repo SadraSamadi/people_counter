@@ -4,6 +4,7 @@ from time import time
 
 import cv2 as cv
 import dlib
+import imutils
 import numpy as np
 
 
@@ -62,7 +63,9 @@ class PeopleCounter:
 
     def _update(self, frame):
         self._status = 'Waiting'
-        _, self._image = self._video.read()
+        _, image = self._video.read()
+        width = min(self._width, 500)
+        self._image = imutils.resize(image, width=width)
         rgb = cv.cvtColor(self._image, cv.COLOR_BGR2RGB)
         if frame % self._skip_frames == 0:
             self._detect(rgb)
